@@ -1,0 +1,4 @@
+[Marketo Credentials]
+munchkin_id = 000-AAA-999
+client_id = <CLIENT ID HERE>
+client_secret = <CLIENT SECRET HERE>
