@@ -1,6 +1,8 @@
 import snowflake.connector
 import os
 import configparser
+import pandas as pd
+import numpy as np
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric import dsa
@@ -47,10 +49,6 @@ cs.execute("select * from customers")
 print(','.join([col[0] for col in cs.description]))
 print(cs.sfqid)
 
-for (id, first_name, last_name) in cs:
-        print('{0}, {1}, {2}'.format(id, first_name, last_name))
-finally:
-    cs.close()
 
 # Marketo Connection
 munchkin_id = config.get('Marketo Credentials', 'munchkin_id')
@@ -63,18 +61,49 @@ mc = MarketoClient(munchkin_id, client_id, client_secret, api_limit, max_retry_t
 import requests
 
 resp = requests.get('https://' + munchkin_id + '.mktorest.com/identity/oauth/token?grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret)
-print(resp.json())
+print(json.loads(resp.text))
 
-lead = list()
-for i in range(5):
-  lead.append(mc.execute(method = 'get_lead_by_id', id = i+1))
-  print(lead)
+j0 = json.loads(resp.text)
+j0
+token_type = j0['token_type'].capitalize()
+acc_token = j0['access_token']
+print(acc_token)
+headers = {'Authorization': token_type + ' ' + acc_token}
+print(headers)
 
-print(json.dumps([{'lead':x} for x in lead],indent = 2))
-lead[0]
+url = 'https://' + munchkin_id + '.mktorest.com/rest/v1/campaigns.json'
+r = requests.get(url, headers=headers)
+data = json.loads(r.text)
+print(data['nextPageToken'])
+counter = 1
+print("page = " + str(counter))
+while 'nextPageToken' in data:
+    url = url + '?nextPageToken=' + data['nextPageToken']
+    r = requests.get(url, headers = headers)
+    data = json.loads(r.text)
+    counter = counter + 1
+    print("page = " + str(counter))
 
-lead = mc.execute(method = 'describe')
-print(lead)
+print("reached End of File")
 
-lead
+results = data['result']
+type(results[0])
+
+df = pd.DataFrame(results)
+df.head()
+df.dtypes
+df['updatedAt'] = pd.to_datetime(df['updatedAt'])
+df['updatedAt']
+# lead = list()
+# for i in range(5):
+#   lead.append(mc.execute(method = 'get_lead_by_id', id = i+1))
+#   print(lead)
+#
+# print(json.dumps([{'lead':x} for x in lead],indent = 2))
+# lead[0]
+#
+# lead = mc.execute(method = 'describe')
+# print(lead)
+#
+# lead
 ctx.close()
